@@ -33,6 +33,9 @@ cache:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
+  - env: BUILD=cabal GHCVER=7.0.1 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 7.0.1"
+    addons: {apt: {packages: [cabal-install-1.16,ghc-7.0.1], sources: [hvr-ghc]}}
   - env: BUILD=cabal GHCVER=7.4.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 7.4.2"
     addons: {apt: {packages: [cabal-install-1.16,ghc-7.4.2], sources: [hvr-ghc]}}
@@ -115,8 +118,14 @@ install:
       cabal --version
       travis_retry cabal update
 
-      # Get the list of packages from the stack.yaml file
-      PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@' | grep -v 'core-tests')
+      # not all packages are supported under GHC 7.0
+      if [ "$GHCVER" == 7.0.1 ]
+      then
+        PACKAGES="core/ hunit/"
+      else
+        # Get the list of packages from the stack.yaml file
+        PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@' | grep -v 'core-tests')
+      fi
 
       cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
       ;;
