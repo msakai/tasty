@@ -33,9 +33,9 @@ cache:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
-  - env: BUILD=cabal GHCVER=7.0.1 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  - env: BUILD=cabal GHCVER=7.0.1 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 7.0.1"
-    addons: {apt: {packages: [cabal-install-1.16,ghc-7.0.1], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [cabal-install-2.0,ghc-7.0.1], sources: [hvr-ghc]}}
 
 
   allow_failures:
