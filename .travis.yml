@@ -87,7 +87,7 @@ install:
       # not all packages are supported under GHC 7.0
       if [ "$GHCVER" == 7.0.1 ]
       then
-        PACKAGES="core/ hunit/"
+        PACKAGES="core/"
       else
         # Get the list of packages from the stack.yaml file
         PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@' | grep -v 'core-tests')
