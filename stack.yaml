@@ -9,4 +9,8 @@ extra-deps:
 - unbounded-delays-0.1.1.0
 # this is needed for travis, because call-stack is absent from the old snapshots
 - call-stack-0.1.0
+# this is needed during the 1.0 -> 1.1 migration for the CI tests to pass,
+# because the released tasty-golden would not build
+- git: https://github.com/feuerbach/tasty-golden.git
+  commit: b3f8095bcd9d281782897507b136c2ce4512dd1e
 flags: {}
