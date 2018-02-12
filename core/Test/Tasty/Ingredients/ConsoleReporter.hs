@@ -451,7 +451,8 @@ instance IsOption UseColor where
   defaultValue = Auto
   parseValue = parseUseColor
   optionName = return "color"
-  optionHelp = return "When to use colored output. Options are 'never', 'always' and 'auto' (default: 'auto')"
+  optionHelp = return "When to use colored output (default: 'auto')"
+  optionCLParser = metavar "never|always|auto"
 
 -- | @useColor when isTerm@ decides if colors should be used,
 --   where @isTerm@ indicates whether @stdout@ is a terminal device.
