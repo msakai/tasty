@@ -89,7 +89,7 @@ newtype Help = Help Bool
 instance IsOption Help where
   defaultValue = Help False
   optionName = return "help"
-  parseValue = fmap Help . safeRead
+  parseValue = fmap Help . safeReadBool
   optionHelp = return "Display help and exit"
   optionCLParser = short 'h' <> onValue (Help True)
 

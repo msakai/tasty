@@ -21,10 +21,12 @@ module Test.Tasty.Options
   , OptionDescription(..)
     -- * Utilities
   , safeRead
+  , safeReadBool
   ) where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Data.Char (toLower)
 import Data.Tagged
 import Data.Proxy
 import Data.Typeable
@@ -40,7 +42,8 @@ import qualified Data.Semigroup (Semigroup((<>)))
 class Typeable v => IsOption v where
   -- | The value to use if the option was not supplied explicitly
   defaultValue :: v
-  -- | Try to parse an option value from a string
+  -- | Try to parse an option value from a string. Consider using
+  -- 'safeReadBool' for boolean options and 'safeRead' for numeric options.
   parseValue :: String -> Maybe v
   -- | The option name. It is used to form the command line option name, for
   -- instance. Therefore, it had better not contain spaces or other fancy
@@ -106,3 +109,11 @@ safeRead :: Read a => String -> Maybe a
 safeRead s
   | [(x, "")] <- reads s = Just x
   | otherwise = Nothing
+
+-- | Parse a 'Bool' case-insensitively
+safeReadBool :: String -> Maybe Bool
+safeReadBool s =
+  case (map toLower s) of
+    "true" -> Just True
+    "false" -> Just False
+    _ -> Nothing
