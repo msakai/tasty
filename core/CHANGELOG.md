@@ -1,6 +1,52 @@
 Changes
 =======
 
+Version 1.1
+-----------
+
+Command-line options now use the standard `System.Console.GetOpt`
+instead of `optparse-applicative` in order to reduce the number of transitive
+dependencies.
+
+As a consequence, the type of `optionCLParser` is now changed, and the functions
+`flagCLParser`, `mkFlagCLParser`, and `mkOptionCLParser` are now gone.
+
+Migration to the new API should be straightforward.
+Please see the documentation for `Test.Tasty.Options` for a detailed description
+of the new API or look at the following examples from the tasty codebase itself
+(in the form of diffs):
+
+
+```
+-  optionCLParser = mkFlagCLParser (short 'q') (Quiet True)
++  optionCLParser = CLFlag ['q'] (Quiet True)
+```
+
+```
+-  optionCLParser = mkFlagCLParser mempty (HideSuccesses True)
++  optionCLParser = CLFlag [] (HideSuccesses True)
+```
+
+```
+-  optionCLParser = mkFlagCLParser (short 'l') (ListTests True)
++  optionCLParser = CLFlag ['l'] (ListTests True)
+```
+
+```
+-  optionCLParser = mkOptionCLParser (short 'j')
++  optionCLParser = CLOption ['j'] "NUMBER"
+```
+
+```
+-  optionCLParser = mkOptionCLParser (short 't')
++  optionCLParser = CLOption ['t'] "DURATION"
+```
+
+```
+-  optionCLParser = mkOptionCLParser (short 'p')
++  optionCLParser = CLOption ['p'] "PATTERN"
+```
+
 Version 1.0.0.1
 ---------------
 

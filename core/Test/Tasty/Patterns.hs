@@ -15,9 +15,9 @@ import Test.Tasty.Patterns.Parser
 import Test.Tasty.Patterns.Eval
 
 import Data.Char
+import Data.Monoid ((<>))
 import qualified Data.Sequence as Seq
 import Data.Typeable
-import Options.Applicative hiding (Success)
 
 newtype TestPattern = TestPattern (Maybe Expr)
   deriving Typeable
@@ -30,7 +30,7 @@ instance IsOption TestPattern where
   parseValue = parseTestPattern
   optionName = return "pattern"
   optionHelp = return "Select only tests which satisfy a pattern or awk expression"
-  optionCLParser = mkOptionCLParser (short 'p')
+  optionCLParser = short 'p' <> metavar "PATTERN"
 
 parseTestPattern :: String -> Maybe TestPattern
 parseTestPattern s

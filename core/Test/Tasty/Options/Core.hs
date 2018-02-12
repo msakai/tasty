@@ -4,6 +4,7 @@
 module Test.Tasty.Options.Core
   ( NumThreads(..)
   , Timeout(..)
+  , Help(..)
   , mkTimeout
   , coreOptions
   )
@@ -13,7 +14,7 @@ import Control.Monad (mfilter)
 import Data.Proxy
 import Data.Typeable
 import Data.Fixed
-import Options.Applicative hiding (str)
+import Data.Monoid ((<>))
 import GHC.Conc
 
 import Test.Tasty.Options
@@ -33,7 +34,7 @@ instance IsOption NumThreads where
   parseValue = mfilter onlyPositive . fmap NumThreads . safeRead
   optionName = return "num-threads"
   optionHelp = return "Number of threads to use for tests execution"
-  optionCLParser = mkOptionCLParser (short 'j')
+  optionCLParser = short 'j' <> metavar "NUMBER"
 
 -- | Filtering function to prevent non-positive number of threads
 onlyPositive :: NumThreads -> Bool
@@ -56,7 +57,7 @@ instance IsOption Timeout where
       <*> pure str
   optionName = return "timeout"
   optionHelp = return "Timeout for individual tests (suffixes: ms,s,m,h; default: s)"
-  optionCLParser = mkOptionCLParser (short 't')
+  optionCLParser = short 't' <> metavar "DURATION"
 
 parseTimeout :: String -> Maybe Integer
 parseTimeout str =
@@ -82,11 +83,22 @@ mkTimeout n =
   Timeout n $
     showFixed True (fromInteger n / (10^6) :: Micro) ++ "s"
 
+-- | Show command-line options help?
+newtype Help = Help Bool
+
+instance IsOption Help where
+  defaultValue = Help False
+  optionName = return "help"
+  parseValue = fmap Help . safeRead
+  optionHelp = return "Display help and exit"
+  optionCLParser = short 'h' <> onValue (Help True)
+
 -- | The list of all core options, i.e. the options not specific to any
 -- provider or ingredient, but to tasty itself. Currently contains
--- 'TestPattern' and 'Timeout'.
+-- 'TestPattern', 'Timeout', and 'Help'.
 coreOptions :: [OptionDescription]
 coreOptions =
   [ Option (Proxy :: Proxy TestPattern)
   , Option (Proxy :: Proxy Timeout)
+  , Option (Proxy :: Proxy Help)
   ]

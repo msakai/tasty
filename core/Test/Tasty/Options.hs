@@ -8,6 +8,10 @@ module Test.Tasty.Options
   (
     -- * IsOption class
     IsOption(..)
+  , CLParser
+  , short
+  , onValue
+  , metavar
     -- * Option sets and operations
   , OptionSet
   , setOption
@@ -16,9 +20,6 @@ module Test.Tasty.Options
   , singleOption
   , OptionDescription(..)
     -- * Utilities
-  , flagCLParser
-  , mkFlagCLParser
-  , mkOptionCLParser
   , safeRead
   ) where
 
@@ -28,9 +29,8 @@ import Data.Tagged
 import Data.Proxy
 import Data.Typeable
 import Data.Monoid
-import Data.Foldable
 import Prelude hiding (mod) -- Silence FTP import warnings
-import Options.Applicative
+import Test.Tasty.Options.CLParser
 #if MIN_VERSION_base(4,9,0)
 import Data.Semigroup (Semigroup)
 import qualified Data.Semigroup (Semigroup((<>)))
@@ -49,29 +49,13 @@ class Typeable v => IsOption v where
   -- | The option description or help string. This can be an arbitrary
   -- string.
   optionHelp :: Tagged v String
-  -- | A command-line option parser.
-  --
-  -- It has a default implementation in terms of the other methods.
-  -- You may want to override it in some cases (e.g. add a short flag) and
-  -- 'flagCLParser', 'mkFlagCLParser' and 'mkOptionCLParser' might come in
-  -- handy.
-  --
-  -- Even if you override this, you still should implement all the methods
-  -- above, to allow alternative interfaces.
-  --
-  -- Do not supply a default value here for this parser!
-  -- This is because if no value was provided on the command line we may
-  -- lookup the option e.g. in the environment. But if the parser always
-  -- succeeds, we have no way to tell whether the user really provided the
-  -- option on the command line.
 
-  -- (If we don't specify a default, the option becomes mandatory.
-  -- So, when we build the complete parser for OptionSet, we turn a
-  -- failing parser into an always-succeeding one that may return an empty
-  -- OptionSet.)
-  optionCLParser :: Parser v
-  optionCLParser = mkOptionCLParser mempty
-
+  -- | How this option is given on the command line (see 'CLParser').
+  --
+  -- This method has a sensible default implementation based on the other
+  -- methods.
+  optionCLParser :: CLParser v
+  optionCLParser = mempty
 
 data OptionValue = forall v . IsOption v => OptionValue v
 
@@ -115,39 +99,6 @@ singleOption v = setOption v mempty
 -- corresponding to a particular option.
 data OptionDescription where
   Option :: IsOption v => Proxy v -> OptionDescription
-
--- | Command-line parser to use with flags
-flagCLParser
-  :: forall v . IsOption v
-  => Maybe Char -- ^ optional short flag
-  -> v          -- ^ non-default value (when the flag is supplied)
-  -> Parser v
-flagCLParser mbShort = mkFlagCLParser (foldMap short mbShort)
-
--- | Command-line flag parser that takes additional option modifiers.
-mkFlagCLParser
-  :: forall v . IsOption v
-  => Mod FlagFields v -- ^ option modifier
-  -> v                -- ^ non-default value (when the flag is supplied)
-  -> Parser v
-mkFlagCLParser mod v = flag' v
-  (  long (untag (optionName :: Tagged v String))
-  <> help (untag (optionHelp :: Tagged v String))
-  <> mod
-  )
-
--- | Command-line option parser that takes additional option modifiers.
-mkOptionCLParser :: forall v . IsOption v => Mod OptionFields v -> Parser v
-mkOptionCLParser mod =
-  option parse
-    (  long name
-    <> help (untag (optionHelp :: Tagged v String))
-    <> mod
-    )
-  where
-    name = untag (optionName :: Tagged v String)
-    parse = str >>=
-      maybe (readerError $ "Could not parse " ++ name) pure <$> parseValue
 
 -- | Safe read function. Defined here for convenience to use for
 -- 'parseValue'.

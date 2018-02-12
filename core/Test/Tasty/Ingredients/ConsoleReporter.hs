@@ -40,7 +40,6 @@ import Data.Char
 import Data.Maybe
 import Data.Monoid
 import Data.Typeable
-import Options.Applicative hiding (str)
 import System.IO
 import System.Console.ANSI
 #if !MIN_VERSION_base(4,8,0)
@@ -426,7 +425,7 @@ instance IsOption Quiet where
   parseValue = fmap Quiet . safeRead
   optionName = return "quiet"
   optionHelp = return "Do not produce any output; indicate success only by the exit code"
-  optionCLParser = mkFlagCLParser (short 'q') (Quiet True)
+  optionCLParser = short 'q' <> onValue (Quiet True)
 
 -- | Report only failed tests
 newtype HideSuccesses = HideSuccesses Bool
@@ -436,7 +435,7 @@ instance IsOption HideSuccesses where
   parseValue = fmap HideSuccesses . safeRead
   optionName = return "hide-successes"
   optionHelp = return "Do not print tests that passed successfully"
-  optionCLParser = mkFlagCLParser mempty (HideSuccesses True)
+  optionCLParser = onValue (HideSuccesses True)
 
 -- | When to use color on the output
 --

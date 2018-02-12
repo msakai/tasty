@@ -16,7 +16,7 @@ Features:
 * Extensibility: add your own test providers and ingredients (runners) above and
   beyond those provided
 
-To find out what's new, read the **[change log][]**.
+To find out what's new, please see the **[change log][]**.
 
 [change log]: https://github.com/feuerbach/tasty/blob/master/core/CHANGELOG.md
 

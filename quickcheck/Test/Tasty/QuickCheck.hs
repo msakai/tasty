@@ -133,7 +133,7 @@ instance IsOption QuickCheckVerbose where
   parseValue = fmap QuickCheckVerbose . safeRead
   optionName = return "quickcheck-verbose"
   optionHelp = return "Show the generated test cases"
-  optionCLParser = mkFlagCLParser mempty (QuickCheckVerbose True)
+  optionCLParser = onValue (QuickCheckVerbose True)
 
 -- | Convert tasty options into QuickCheck options.
 --
