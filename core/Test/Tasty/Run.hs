@@ -32,6 +32,8 @@ import qualified System.Clock as Clock
 
 import Test.Tasty.Core
 import Test.Tasty.Parallel
+import Test.Tasty.Patterns
+import Test.Tasty.Patterns.Types
 import Test.Tasty.Options
 import Test.Tasty.Options.Core
 import Test.Tasty.Runners.Reducers
@@ -194,34 +196,58 @@ executeTest action statusVar timeoutOpt inits fins = mask $ \restore -> do
 
 type InitFinPair = (Seq.Seq Initializer, Seq.Seq Finalizer)
 
+-- | Dependencies of a test
+type Deps = [Expr]
+
+-- | Traversal type used in 'createTestActions'
+type Tr = Traversal
+        (WriterT ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer)
+        (ReaderT (Path, Deps)
+        IO))
+
 -- | Turn a test tree into a list of actions to run tests coupled with
 -- variables to watch them.
 --
 -- Also return a list of finalizers in the order they should run when the
 -- test suite completes.
-createTestActions :: OptionSet -> TestTree -> IO ([(IO (), TVar Status)], Seq.Seq Finalizer)
+createTestActions
+  :: OptionSet
+  -> TestTree
+  -> IO ([(Action, TVar Status)], Seq.Seq Finalizer)
 createTestActions opts0 tree = do
   let
-    traversal ::
-      Traversal (WriterT ([(InitFinPair -> IO (), TVar Status)], Seq.Seq Finalizer) IO)
+    traversal :: Tr
     traversal =
       foldTestTree
-        trivialFold
+        (trivialFold :: TreeFold Tr)
           { foldSingle = runSingleTest
           , foldResource = addInitAndRelease
+          , foldGroup = \name (Traversal a) ->
+              Traversal $ local (first (Seq.|> name)) a
+          , foldAfter = \pat (Traversal a) ->
+              Traversal $ local (second (pat :)) a
           }
         opts0 tree
-  (tests, rvars) <- unwrap traversal
-  let tests' = map (first ($ (Seq.empty, Seq.empty))) tests
-  return (tests', rvars)
+  (tests, fins) <- unwrap traversal
+  let
+    tests' :: [(Action, TVar Status)]
+    tests' = resolveDeps $ map
+      (\(act, testInfo) ->
+        (act (Seq.empty, Seq.empty), testInfo))
+      tests
+  return (tests', fins)
 
   where
-    runSingleTest opts _ test = Traversal $ do
+    runSingleTest :: IsTest t => OptionSet -> TestName -> t -> Tr
+    runSingleTest opts name test = Traversal $ do
       statusVar <- liftIO $ atomically $ newTVar NotStarted
+      (parentPath, deps) <- ask
       let
+        path = parentPath Seq.|> name
         act (inits, fins) =
           executeTest (run opts test) statusVar (lookupOption opts) inits fins
-      tell ([(act, statusVar)], mempty)
+      tell ([(act, (statusVar, path, deps))], mempty)
+    addInitAndRelease :: ResourceSpec a -> (IO a -> Tr) -> Tr
     addInitAndRelease (ResourceSpec doInit doRelease) a = wrap $ do
       initVar <- atomically $ newTVar NotCreated
       (tests, fins) <- unwrap $ a (getResource initVar)
@@ -232,8 +258,39 @@ createTestActions opts0 tree = do
         fin = Finalizer doRelease initVar finishVar
         tests' = map (first $ local $ (Seq.|> ini) *** (fin Seq.<|)) tests
       return (tests', fins Seq.|> fin)
-    wrap = Traversal . WriterT . fmap ((,) ())
-    unwrap = execWriterT . getTraversal
+    wrap
+      :: IO ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer)
+      -> Tr
+    wrap = Traversal . WriterT . lift . fmap ((,) ())
+    unwrap
+      :: Tr
+      -> IO ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer)
+    unwrap = flip runReaderT mempty . execWriterT . getTraversal
+
+resolveDeps :: [(IO (), (TVar Status, Path, Deps))] -> [(Action, TVar Status)]
+resolveDeps tests = do
+  (action, (statusVar, _, deps)) <- tests
+  let
+    depStatuses :: [TVar Status]
+    depStatuses
+      | null deps = []
+      | otherwise = do
+          let expr = foldr1 Or deps
+          (_, (statusVar1, path, _)) <- tests
+          guard $ exprMatches expr path
+          return statusVar1
+
+    isReady :: STM Bool
+    isReady = foldr
+      (\v k -> do
+        status <- readTVar v
+        case status of
+          Done _ -> k
+          _ -> return False
+      )
+      (return True)
+      depStatuses
+  return (Action isReady action, statusVar)
 
 -- | Used to create the IO action which is passed in a WithResource node
 getResource :: TVar (Resource r) -> IO r

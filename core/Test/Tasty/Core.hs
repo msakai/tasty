@@ -7,6 +7,7 @@ module Test.Tasty.Core where
 import Control.Exception
 import Test.Tasty.Options
 import Test.Tasty.Patterns
+import Test.Tasty.Patterns.Types
 import Data.Foldable
 import qualified Data.Sequence as Seq
 import Data.Monoid
@@ -166,10 +167,22 @@ data TestTree
     -- tests.
   | AskOptions (OptionSet -> TestTree)
     -- ^ Ask for the options and customize the tests based on them
+  | After Expr TestTree
+    -- ^ Only run after all tests that match a given pattern finish
+    -- (and, depending on 'DependencyType', succeed)
 
 -- | Create a named group of test cases or other groups
 testGroup :: TestName -> [TestTree] -> TestTree
 testGroup = TestGroup
+
+after_ :: Expr -> TestTree -> TestTree
+after_ = After
+
+after :: String -> TestTree -> TestTree
+after s =
+  case parseExpr s of
+    Nothing -> error $ "Could not parse pattern " ++ show s
+    Just e -> after_ e
 
 -- | An algebra for folding a `TestTree`.
 --
@@ -180,6 +193,7 @@ data TreeFold b = TreeFold
   { foldSingle :: forall t . IsTest t => OptionSet -> TestName -> t -> b
   , foldGroup :: TestName -> b -> b
   , foldResource :: forall a . ResourceSpec a -> (IO a -> b) -> b
+  , foldAfter :: Expr -> b -> b
   }
 
 -- | 'trivialFold' can serve as the basis for custom folds. Just override
@@ -198,6 +212,7 @@ trivialFold = TreeFold
   { foldSingle = \_ _ _ -> mempty
   , foldGroup = const id
   , foldResource = \_ f -> f $ throwIO NotRunningTests
+  , foldAfter = const id
   }
 
 -- | Fold a test tree into a single value.
@@ -227,7 +242,7 @@ foldTestTree
   -> TestTree
      -- ^ the tree to fold
   -> b
-foldTestTree (TreeFold fTest fGroup fResource) opts0 tree0 =
+foldTestTree (TreeFold fTest fGroup fResource fAfter) opts0 tree0 =
   let pat = lookupOption opts0
   in go pat mempty opts0 tree0
   where
@@ -242,6 +257,7 @@ foldTestTree (TreeFold fTest fGroup fResource) opts0 tree0 =
         PlusTestOptions f tree -> go pat path (f opts) tree
         WithResource res0 tree -> fResource res0 $ \res -> go pat path opts (tree res)
         AskOptions f -> go pat path opts (f opts)
+        After dep tree -> fAfter dep $ go pat path opts tree
 
 -- | Get the list of options that are relevant for a given test tree
 treeOptions :: TestTree -> [OptionDescription]
