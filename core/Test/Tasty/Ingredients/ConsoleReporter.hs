@@ -391,7 +391,7 @@ consoleTestReporter =
     else
 
       do
-      isTerm <- hSupportsANSI stdout
+      let isTerm = True
 
       (\k -> if isTerm
         then (do hideCursor; k) `finally` showCursor
