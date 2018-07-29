@@ -269,7 +269,7 @@ createTestActions opts0 tree = do
 
 resolveDeps :: [(IO (), (TVar Status, Path, Deps))] -> [(Action, TVar Status)]
 resolveDeps tests = do
-  (action, (statusVar, _, deps)) <- tests
+  (run_test, (statusVar, _, deps)) <- tests
   let
     -- Note: Duplicate dependencies may arise if the same test name matches
     -- multiple patterns. It's not clear that removing them is worth the
@@ -288,11 +288,24 @@ resolveDeps tests = do
         case status of
           Done result
             | deptype == AllFinish || resultSuccessful result -> k
+            | otherwise -> return ActionSkip
           _ -> return ActionWait
       )
       (return ActionReady)
       depStatuses
-  return (Action getStatus action, statusVar)
+  let
+    action = Action
+      { actionStatus = getStatus
+      , actionRun = run_test
+      , actionSkip = writeTVar statusVar $ Done $ Result
+          -- See Note [Skipped tests]
+          { resultOutcome = Failure TestDepFailed
+          , resultDescription = ""
+          , resultShortDescription = "SKIP"
+          , resultTime = 0
+          }
+      }
+  return (action, statusVar)
 
 -- | Used to create the IO action which is passed in a WithResource node
 getResource :: TVar (Resource r) -> IO r

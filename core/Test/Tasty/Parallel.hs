@@ -20,6 +20,7 @@ data ActionStatus
 data Action = Action
   { actionStatus :: STM ActionStatus
   , actionRun :: IO ()
+  , actionSkip :: STM ()
   }
 
 -- | Take a list of actions and execute them in parallel, no more than @n@
@@ -86,9 +87,11 @@ findBool = go []
     go _ [] =
       -- nothing ready yet
       retry
-    go past (this@(Action getStatus _) : rest) = do
-      status <- getStatus
+    go past (this : rest) = do
+      status <- actionStatus this
       case status of
         ActionReady -> return $ Just (this, reverse past ++ rest)
         ActionWait -> go (this : past) rest
-        ActionSkip -> go past rest
+        ActionSkip -> do
+          actionSkip this
+          go past rest

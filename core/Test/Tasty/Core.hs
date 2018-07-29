@@ -31,6 +31,8 @@ data FailureReason
     -- may simply raise an exception.
   | TestTimedOut Integer
     -- ^ test didn't complete in allotted time
+  | TestDepFailed -- See Note [Skipped tests]
+    -- ^ a dependency of this test failed, so this test was skipped.
   deriving Show
 
 -- | Outcome of a test run
@@ -64,6 +66,28 @@ data Result = Result
   , resultTime :: Time
     -- ^ How long it took to run the test, in seconds.
   }
+
+{- Note [Skipped tests]
+   ~~~~~~~~~~~~~~~~~~~~
+   There are two potential ways to represent the tests that are skipped
+   because of their failed dependencies:
+   1. With Outcome = Failure, and FailureReason giving the specifics (TestDepFailed)
+   2. With a dedicated Outcome = Skipped
+
+   It seems to me that (1) will lead to fewer bugs (esp. in the extension packages),
+   because most of the time skipped tests should be handled in the same way
+   as failed tests.
+   But sometimes it is not obvious what the right behavior should be. E.g.
+   should --hide-successes show or hide the skipped tests?
+
+   Perhaps we should hide them, because they aren't really informative.
+   Or perhaps we shouldn't hide them, because we are not sure that they
+   will pass, and hiding them will imply a false sense of security
+   ("there's at most 2 tests failing", whereas in fact there could be much more).
+
+   So I might change this in the future, but for now treating them as
+   failures seems the easiest yet reasonable approach.
+-}
 
 -- | 'True' for a passed test, 'False' for a failed one.
 resultSuccessful :: Result -> Bool
