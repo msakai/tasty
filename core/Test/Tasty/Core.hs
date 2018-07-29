@@ -143,6 +143,19 @@ instance Show ResourceError where
 
 instance Exception ResourceError
 
+-- | These are the two ways in which one test may depend on the others.
+--
+-- This is the same distinction as the
+-- <http://testng.org/doc/documentation-main.html#dependent-methods hard vs soft dependencies in TestNG>.
+data DependencyType
+  = AllSucceed
+    -- ^ The current test will be executed after its dependencies finish, and only
+    -- if all of the dependencies succeed.
+  | AllFinish
+    -- ^ The current test will be executed after its dependencies finish,
+    -- regardless of whether they succeed or not.
+  deriving Eq
+
 -- | The main data structure defining a test suite.
 --
 -- It consists of individual test cases and properties, organized in named
@@ -167,22 +180,22 @@ data TestTree
     -- tests.
   | AskOptions (OptionSet -> TestTree)
     -- ^ Ask for the options and customize the tests based on them
-  | After Expr TestTree
+  | After DependencyType Expr TestTree
     -- ^ Only run after all tests that match a given pattern finish
-    -- (and, depending on 'DependencyType', succeed)
+    -- (and, depending on the 'DependencyType', succeed)
 
 -- | Create a named group of test cases or other groups
 testGroup :: TestName -> [TestTree] -> TestTree
 testGroup = TestGroup
 
-after_ :: Expr -> TestTree -> TestTree
+after_ :: DependencyType -> Expr -> TestTree -> TestTree
 after_ = After
 
-after :: String -> TestTree -> TestTree
-after s =
+after :: DependencyType -> String -> TestTree -> TestTree
+after deptype s =
   case parseExpr s of
     Nothing -> error $ "Could not parse pattern " ++ show s
-    Just e -> after_ e
+    Just e -> after_ deptype e
 
 -- | An algebra for folding a `TestTree`.
 --
@@ -193,7 +206,7 @@ data TreeFold b = TreeFold
   { foldSingle :: forall t . IsTest t => OptionSet -> TestName -> t -> b
   , foldGroup :: TestName -> b -> b
   , foldResource :: forall a . ResourceSpec a -> (IO a -> b) -> b
-  , foldAfter :: Expr -> b -> b
+  , foldAfter :: DependencyType -> Expr -> b -> b
   }
 
 -- | 'trivialFold' can serve as the basis for custom folds. Just override
@@ -212,7 +225,7 @@ trivialFold = TreeFold
   { foldSingle = \_ _ _ -> mempty
   , foldGroup = const id
   , foldResource = \_ f -> f $ throwIO NotRunningTests
-  , foldAfter = const id
+  , foldAfter = \_ _ b -> b
   }
 
 -- | Fold a test tree into a single value.
@@ -257,7 +270,7 @@ foldTestTree (TreeFold fTest fGroup fResource fAfter) opts0 tree0 =
         PlusTestOptions f tree -> go pat path (f opts) tree
         WithResource res0 tree -> fResource res0 $ \res -> go pat path opts (tree res)
         AskOptions f -> go pat path opts (f opts)
-        After dep tree -> fAfter dep $ go pat path opts tree
+        After deptype dep tree -> fAfter deptype dep $ go pat path opts tree
 
 -- | Get the list of options that are relevant for a given test tree
 treeOptions :: TestTree -> [OptionDescription]

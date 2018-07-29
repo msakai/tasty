@@ -56,6 +56,7 @@ module Test.Tasty
   -- the tests are run, and destroy or release afterwards.
   , withResource
   -- * Dependencies
+  , DependencyType(..)
   , after
   , after_
   )

@@ -197,7 +197,7 @@ executeTest action statusVar timeoutOpt inits fins = mask $ \restore -> do
 type InitFinPair = (Seq.Seq Initializer, Seq.Seq Finalizer)
 
 -- | Dependencies of a test
-type Deps = [Expr]
+type Deps = [(DependencyType, Expr)]
 
 -- | Traversal type used in 'createTestActions'
 type Tr = Traversal
@@ -224,8 +224,8 @@ createTestActions opts0 tree = do
           , foldResource = addInitAndRelease
           , foldGroup = \name (Traversal a) ->
               Traversal $ local (first (Seq.|> name)) a
-          , foldAfter = \pat (Traversal a) ->
-              Traversal $ local (second (pat :)) a
+          , foldAfter = \deptype pat (Traversal a) ->
+              Traversal $ local (second ((deptype, pat) :)) a
           }
         opts0 tree
   (tests, fins) <- unwrap traversal
@@ -271,26 +271,28 @@ resolveDeps :: [(IO (), (TVar Status, Path, Deps))] -> [(Action, TVar Status)]
 resolveDeps tests = do
   (action, (statusVar, _, deps)) <- tests
   let
-    depStatuses :: [TVar Status]
-    depStatuses
-      | null deps = []
-      | otherwise = do
-          let expr = foldr1 Or deps
-          (_, (statusVar1, path, _)) <- tests
-          guard $ exprMatches expr path
-          return statusVar1
+    -- Note: Duplicate dependencies may arise if the same test name matches
+    -- multiple patterns. It's not clear that removing them is worth the
+    -- trouble; might consider this in the future.
+    depStatuses :: [(DependencyType, TVar Status)]
+    depStatuses = do
+      (deptype, depexpr) <- deps
+      (_, (statusVar1, path, _)) <- tests
+      guard $ exprMatches depexpr path
+      return (deptype, statusVar1)
 
-    isReady :: STM Bool
-    isReady = foldr
-      (\v k -> do
-        status <- readTVar v
+    getStatus :: STM ActionStatus
+    getStatus = foldr
+      (\(deptype, statusvar) k -> do
+        status <- readTVar statusvar
         case status of
-          Done _ -> k
-          _ -> return False
+          Done result
+            | deptype == AllFinish || resultSuccessful result -> k
+          _ -> return ActionWait
       )
-      (return True)
+      (return ActionReady)
       depStatuses
-  return (Action isReady action, statusVar)
+  return (Action getStatus action, statusVar)
 
 -- | Used to create the IO action which is passed in a WithResource node
 getResource :: TVar (Resource r) -> IO r

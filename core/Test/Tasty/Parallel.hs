@@ -1,14 +1,24 @@
 -- | A helper module which takes care of parallelism
 {-# LANGUAGE DeriveDataTypeable #-}
-module Test.Tasty.Parallel (Action(..), runInParallel) where
+module Test.Tasty.Parallel (ActionStatus(..), Action(..), runInParallel) where
 
 import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 import Foreign.StablePtr
 
+-- | What to do about an 'Action'?
+data ActionStatus
+  = ActionReady
+    -- ^ the action is ready to be executed
+  | ActionSkip
+    -- ^ the action should be skipped
+  | ActionWait
+    -- ^ not sure what to do yet; wait
+  deriving Eq
+
 data Action = Action
-  { actionReady :: STM Bool
+  { actionStatus :: STM ActionStatus
   , actionRun :: IO ()
   }
 
@@ -76,8 +86,9 @@ findBool = go []
     go _ [] =
       -- nothing ready yet
       retry
-    go past (this@(Action getReady _) : rest) = do
-      ready <- getReady
-      case ready of
-        True -> return $ Just (this, reverse past ++ rest)
-        False -> go (this : past) rest
+    go past (this@(Action getStatus _) : rest) = do
+      status <- getStatus
+      case status of
+        ActionReady -> return $ Just (this, reverse past ++ rest)
+        ActionWait -> go (this : past) rest
+        ActionSkip -> go past rest
