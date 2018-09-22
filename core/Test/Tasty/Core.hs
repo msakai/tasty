@@ -66,6 +66,7 @@ data Result = Result
   , resultTime :: Time
     -- ^ How long it took to run the test, in seconds.
   }
+  deriving Show
 
 {- Note [Skipped tests]
    ~~~~~~~~~~~~~~~~~~~~
@@ -117,6 +118,7 @@ data Progress = Progress
     -- 'progressPercent' should be a value between 0 and 1. If it's impossible
     -- to compute the estimate, use 0.
   }
+  deriving Show
 
 -- | The interface to be implemented by a test provider.
 --
@@ -178,7 +180,7 @@ data DependencyType
   | AllFinish
     -- ^ The current test will be executed after its dependencies finish,
     -- regardless of whether they succeed or not.
-  deriving Eq
+  deriving (Eq, Show)
 
 -- | The main data structure defining a test suite.
 --

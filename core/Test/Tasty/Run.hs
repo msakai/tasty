@@ -46,6 +46,7 @@ data Status
     -- ^ test is being run
   | Done Result
     -- ^ test finished with a given result
+  deriving Show
 
 -- | Mapping from test numbers (starting from 0) to their status variables.
 --
