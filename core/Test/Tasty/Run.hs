@@ -1,6 +1,6 @@
 -- | Running tests
 {-# LANGUAGE ScopedTypeVariables, ExistentialQuantification, RankNTypes,
-             FlexibleContexts, BangPatterns, CPP #-}
+             FlexibleContexts, BangPatterns, CPP, DeriveDataTypeable #-}
 module Test.Tasty.Run
   ( Status(..)
   , StatusMap
@@ -12,6 +12,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Foldable as F
 import Data.Maybe
 import Data.Graph (SCC(..), stronglyConnComp)
+import Data.Typeable
 #ifndef VERSION_clock
 import Data.Time.Clock.POSIX (getPOSIXTime)
 #endif
@@ -209,6 +210,7 @@ type Tr = Traversal
 
 data DependencyException
   = DependencyLoop
+  deriving (Typeable)
 
 instance Show DependencyException where
   show DependencyLoop = "Test dependencies form a loop."
