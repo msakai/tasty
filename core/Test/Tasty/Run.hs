@@ -1,6 +1,6 @@
 -- | Running tests
 {-# LANGUAGE ScopedTypeVariables, ExistentialQuantification, RankNTypes,
-             FlexibleContexts, BangPatterns, CPP #-}
+             FlexibleContexts, BangPatterns, CPP, LambdaCase #-}
 module Test.Tasty.Run
   ( Status(..)
   , StatusMap
@@ -11,6 +11,7 @@ import qualified Data.IntMap as IntMap
 import qualified Data.Sequence as Seq
 import qualified Data.Foldable as F
 import Data.Maybe
+import Data.Graph (SCC(..), stronglyConnComp)
 #ifndef VERSION_clock
 import Data.Time.Clock.POSIX (getPOSIXTime)
 #endif
@@ -206,11 +207,16 @@ type Tr = Traversal
         (ReaderT (Path, Deps)
         IO))
 
+data DependencyException
+  = DependencyLoop
+
+instance Show DependencyException where
+  show DependencyLoop = "Test dependencies form a loop."
+
+instance Exception DependencyException
+
 -- | Turn a test tree into a list of actions to run tests coupled with
 -- variables to watch them.
---
--- Also return a list of finalizers in the order they should run when the
--- test suite completes.
 createTestActions
   :: OptionSet
   -> TestTree
@@ -231,12 +237,14 @@ createTestActions opts0 tree = do
         opts0 tree
   (tests, fins) <- unwrap traversal
   let
-    tests' :: [(Action, TVar Status)]
-    tests' = resolveDeps $ map
+    mb_tests :: Maybe [(Action, TVar Status)]
+    mb_tests = resolveDeps $ map
       (\(act, testInfo) ->
         (act (Seq.empty, Seq.empty), testInfo))
       tests
-  return (tests', fins)
+  case mb_tests of
+    Just tests' -> return (tests', fins)
+    Nothing -> throwIO DependencyLoop
 
   where
     runSingleTest :: IsTest t => OptionSet -> TestName -> t -> Tr
@@ -268,23 +276,26 @@ createTestActions opts0 tree = do
       -> IO ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer)
     unwrap = flip runReaderT mempty . execWriterT . getTraversal
 
-resolveDeps :: [(IO (), (TVar Status, Path, Deps))] -> [(Action, TVar Status)]
-resolveDeps tests = do
-  (run_test, (statusVar, _, deps)) <- tests
+-- | Take care of the dependencies.
+--
+-- Return 'Nothing' if there is a dependency cycle.
+resolveDeps :: [(IO (), (TVar Status, Path, Deps))] -> Maybe [(Action, TVar Status)]
+resolveDeps tests = checkCycles $ do
+  (run_test, (statusVar, path0, deps)) <- tests
   let
     -- Note: Duplicate dependencies may arise if the same test name matches
     -- multiple patterns. It's not clear that removing them is worth the
     -- trouble; might consider this in the future.
-    depStatuses :: [(DependencyType, TVar Status)]
-    depStatuses = do
+    deps' :: [(DependencyType, TVar Status, Path)]
+    deps' = do
       (deptype, depexpr) <- deps
       (_, (statusVar1, path, _)) <- tests
       guard $ exprMatches depexpr path
-      return (deptype, statusVar1)
+      return (deptype, statusVar1, path)
 
     getStatus :: STM ActionStatus
     getStatus = foldr
-      (\(deptype, statusvar) k -> do
+      (\(deptype, statusvar, _) k -> do
         status <- readTVar statusvar
         case status of
           Done result
@@ -293,8 +304,9 @@ resolveDeps tests = do
           _ -> return ActionWait
       )
       (return ActionReady)
-      depStatuses
+      deps'
   let
+    dep_paths = map (\(_, _, path) -> path) deps'
     action = Action
       { actionStatus = getStatus
       , actionRun = run_test
@@ -306,7 +318,17 @@ resolveDeps tests = do
           , resultTime = 0
           }
       }
-  return (action, statusVar)
+  return ((action, statusVar), (path0, dep_paths))
+
+checkCycles :: Ord b => [(a, (b, [b]))] -> Maybe [a]
+checkCycles tests = do
+  let
+    result = fst <$> tests
+    graph = [ ((), v, vs) | (v, vs) <- snd <$> tests ]
+    sccs = stronglyConnComp graph
+    not_cyclic = all (\case AcyclicSCC{} -> True; CyclicSCC{} -> False) sccs
+  guard not_cyclic
+  return result
 
 -- | Used to create the IO action which is passed in a WithResource node
 getResource :: TVar (Resource r) -> IO r
