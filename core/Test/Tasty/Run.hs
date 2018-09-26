@@ -1,6 +1,6 @@
 -- | Running tests
 {-# LANGUAGE ScopedTypeVariables, ExistentialQuantification, RankNTypes,
-             FlexibleContexts, BangPatterns, CPP, LambdaCase #-}
+             FlexibleContexts, BangPatterns, CPP #-}
 module Test.Tasty.Run
   ( Status(..)
   , StatusMap
@@ -326,7 +326,10 @@ checkCycles tests = do
     result = fst <$> tests
     graph = [ ((), v, vs) | (v, vs) <- snd <$> tests ]
     sccs = stronglyConnComp graph
-    not_cyclic = all (\case AcyclicSCC{} -> True; CyclicSCC{} -> False) sccs
+    not_cyclic = all (\scc -> case scc of
+        AcyclicSCC{} -> True
+        CyclicSCC{}  -> False)
+      sccs
   guard not_cyclic
   return result
 
