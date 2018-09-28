@@ -5,6 +5,7 @@ module Test.Tasty.Run
   ( Status(..)
   , StatusMap
   , launchTestTree
+  , DependencyException(..)
   ) where
 
 import qualified Data.IntMap as IntMap

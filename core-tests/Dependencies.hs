@@ -9,6 +9,7 @@ import Control.Concurrent.STM
 import Text.Printf
 import qualified Data.IntMap as IntMap
 import Control.Monad
+import Control.Exception
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
 #endif
@@ -22,8 +23,29 @@ testTree deptype succeed =
     , testCase "Three" $ threadDelay 1e6 >> assertBool "fail" succeed
     ]
 
+-- an example of a tree with circular dependencies
+circDepTree1 :: TestTree
+circDepTree1 = after AllSucceed "One" $ testCase "One" $ return ()
+
+-- another example of a tree with circular dependencies
+circDepTree2 :: TestTree
+circDepTree2 = testGroup "dependency test"
+  [ after AllFinish  "Three" $ testCase "One"   $ return ()
+  , after AllSucceed "One"   $ testCase "Two"   $ return ()
+  , after AllFinish  "Two"   $ testCase "Three" $ return ()
+  ]
+
+circDepTests :: [TestTree]
+circDepTests = do
+  (i, tree) <- zip [1,2] [circDepTree1, circDepTree2]
+  return $ testCase ("Circular dependencies " ++ show i) $ do
+    r <- try $ launchTestTree mempty tree $ \_ -> return $ \_ -> return ()
+    case r of
+      Left DependencyLoop -> return ()
+      _ -> assertFailure $ show r
+
 testDependencies :: TestTree
-testDependencies = testGroup "Dependencies" $ do
+testDependencies = testGroup "Dependencies" $ circDepTests ++ do
   succeed <- [True, False]
   deptype <- [AllSucceed, AllFinish]
   return $ testCase (printf "%-5s %s" (show succeed) (show deptype)) $ do
