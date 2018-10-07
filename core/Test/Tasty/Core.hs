@@ -175,10 +175,10 @@ instance Exception ResourceError
 -- <http://testng.org/doc/documentation-main.html#dependent-methods hard vs soft dependencies in TestNG>.
 data DependencyType
   = AllSucceed
-    -- ^ The current test will be executed after its dependencies finish, and only
+    -- ^ The current test tree will be executed after its dependencies finish, and only
     -- if all of the dependencies succeed.
   | AllFinish
-    -- ^ The current test will be executed after its dependencies finish,
+    -- ^ The current test tree will be executed after its dependencies finish,
     -- regardless of whether they succeed or not.
   deriving (Eq, Show)
 
@@ -214,10 +214,71 @@ data TestTree
 testGroup :: TestName -> [TestTree] -> TestTree
 testGroup = TestGroup
 
-after_ :: DependencyType -> Expr -> TestTree -> TestTree
+-- | Like 'after', but accepts the pattern as a syntax tree instead
+-- of a string. Useful for generating a test tree programmatically.
+--
+-- ==== __Examples__
+--
+-- Only match on the test's own name, ignoring the group names:
+--
+-- @
+-- 'after_' 'AllFinish' ('Test.Tasty.Patterns.Types.EQ' ('Field' 'NF') ('StringLit' \"Bar\")) $
+--    'testCase' \"A test that depends on Foo.Bar\" $ ...
+-- @
+after_
+  :: DependencyType -- ^ whether to run the tests even if some of the dependencies fail
+  -> Expr -- ^ the pattern
+  -> TestTree -- ^ the subtree that depends on other tests
+  -> TestTree -- ^ the subtree annotated with dependency information
 after_ = After
 
-after :: DependencyType -> String -> TestTree -> TestTree
+-- | The 'after' combinator declares dependencies between tests.
+--
+-- If a 'TestTree' is wrapped in 'after', the tests in this tree will not run
+-- until certain other tests («dependencies») have finished. These
+-- dependencies are specified using an AWK pattern (see the «Patterns» section
+-- in the README).
+--
+-- Moreover, if the 'DependencyType' argument is set to 'AllSucceed' and
+-- at least one dependency has failed, this test tree will not run at all.
+--
+-- Tasty does not check that the pattern matches any tests (let alone the
+-- correct set of tests), so it is on you to supply the right pattern.
+--
+-- ==== __Examples__
+--
+-- The following test will be executed only after all tests that contain
+-- @Foo@ anywhere in their path finish.
+--
+-- @
+-- 'after' 'AllFinish' \"Foo\" $
+--    'testCase' \"A test that depends on Foo.Bar\" $ ...
+-- @
+--
+-- Note, however, that our test also happens to contain @Foo@ as part of its name,
+-- so it also matches the pattern and becomes a dependency of itself. This
+-- will result in a 'DependencyLoop' exception. To avoid this, either
+-- change the test name so that it doesn't mention @Foo@ or make the
+-- pattern more specific.
+--
+-- You can use AWK patterns, for instance, to specify the full path to the dependency.
+--
+-- @
+-- 'after' 'AllFinish' \"$0 == \\\"Tests.Foo.Bar\\\"\" $
+--    'testCase' \"A test that depends on Foo.Bar\" $ ...
+-- @
+--
+-- Or only specify the dependency's own name, ignoring the group names:
+--
+-- @
+-- 'after' 'AllFinish' \"$NF == \\\"Bar\\\"\" $
+--    'testCase' \"A test that depends on Foo.Bar\" $ ...
+-- @
+after
+  :: DependencyType -- ^ whether to run the tests even if some of the dependencies fail
+  -> String -- ^ the pattern
+  -> TestTree -- ^ the subtree that depends on other tests
+  -> TestTree -- ^ the subtree annotated with dependency information
 after deptype s =
   case parseExpr s of
     Nothing -> error $ "Could not parse pattern " ++ show s

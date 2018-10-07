@@ -209,8 +209,12 @@ type Tr = Traversal
         (ReaderT (Path, Deps)
         IO))
 
+-- | Exceptions related to dependencies between tests.
 data DependencyException
   = DependencyLoop
+    -- ^ Test dependencies form a loop. In other words, test A cannot start
+    -- until test B finishes, and test B cannot start until test
+    -- A finishes.
   deriving (Typeable)
 
 instance Show DependencyException where
