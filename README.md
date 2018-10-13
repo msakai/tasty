@@ -592,10 +592,7 @@ number of tests is large.</p>
 <p>
 If the output is an ANSI-capable terminal, Tasty will give immediate feedback
 about which test is executing and then use ANSI commands to erase it if it's
-successful.</p>
-<figure>
-<video src="https://ro-che.info/img/hide-successes.mp4" autoplay loop muted></video>
-</figure>
+successful (see the <a href="https://ro-che.info/img/hide-successes.mp4">demo</a>).</p>
 <p>
 However, if the Tasty's output becomes too wide to fit in the terminal (if the
 headings are too long or too nested), then wrapping occurs and erasing does not
