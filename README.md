@@ -587,8 +587,20 @@ The following options control behavior of the standard console interface:
   This may be useful for various batch systems, such as commit hooks.
 </dd>
 <dt><code>--hide-successes</code></dt>
-<dd>Report only the tests that has failed. Especially useful when the
-number of tests is large.</dd>
+<dd><p>Report only the tests that has failed. Especially useful when the
+number of tests is large.</p>
+<p>
+If the output is an ANSI-capable terminal, Tasty will give immediate feedback
+about which test is executing and then use ANSI commands to erase it if it's
+successful.</p>
+<figure>
+<video src="https://ro-che.info/img/hide-successes.mp4" autoplay loop muted></video>
+</figure>
+<p>
+However, if the Tasty's output becomes too wide to fit in the terminal (if the
+headings are too long or too nested), then wrapping occurs and erasing does not
+work properly. In that case, use <code>--hide-successes=noansi</code>.</p>
+</p></dd>
 <dt><code>-l,--list-tests</code></dt>
 <dd>Don't run the tests; only list their names, in the format accepted by
 <code>--pattern</code>.</dd>
