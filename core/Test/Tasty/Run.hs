@@ -242,7 +242,7 @@ createTestActions opts0 tree = do
               Traversal $ local (second ((deptype, pat) :)) a
           }
         opts0 tree
-  (tests, fins) <- unwrap traversal
+  (tests, fins) <- unwrap (mempty :: Path) (mempty :: Deps) traversal
   let
     mb_tests :: Maybe [(Action, TVar Status)]
     mb_tests = resolveDeps $ map
@@ -264,9 +264,9 @@ createTestActions opts0 tree = do
           executeTest (run opts test) statusVar (lookupOption opts) inits fins
       tell ([(act, (statusVar, path, deps))], mempty)
     addInitAndRelease :: ResourceSpec a -> (IO a -> Tr) -> Tr
-    addInitAndRelease (ResourceSpec doInit doRelease) a = wrap $ do
+    addInitAndRelease (ResourceSpec doInit doRelease) a = wrap $ \path deps -> do
       initVar <- atomically $ newTVar NotCreated
-      (tests, fins) <- unwrap $ a (getResource initVar)
+      (tests, fins) <- unwrap path deps $ a (getResource initVar)
       let ntests = length tests
       finishVar <- atomically $ newTVar ntests
       let
@@ -275,13 +275,17 @@ createTestActions opts0 tree = do
         tests' = map (first $ local $ (Seq.|> ini) *** (fin Seq.<|)) tests
       return (tests', fins Seq.|> fin)
     wrap
-      :: IO ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer)
+      :: (Path ->
+          Deps ->
+          IO ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer))
       -> Tr
-    wrap = Traversal . WriterT . lift . fmap ((,) ())
+    wrap = Traversal . WriterT . fmap ((,) ()) . ReaderT . uncurry
     unwrap
-      :: Tr
+      :: Path
+      -> Deps
+      -> Tr
       -> IO ([(InitFinPair -> IO (), (TVar Status, Path, Deps))], Seq.Seq Finalizer)
-    unwrap = flip runReaderT mempty . execWriterT . getTraversal
+    unwrap path deps = flip runReaderT (path, deps) . execWriterT . getTraversal
 
 -- | Take care of the dependencies.
 --
