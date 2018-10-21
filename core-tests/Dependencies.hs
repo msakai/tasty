@@ -14,6 +14,12 @@ import Control.Exception
 import Data.Monoid (mempty)
 #endif
 
+testDependencies :: TestTree
+testDependencies = testGroup "Dependencies" $
+  generalDependencyTests ++
+  circDepTests ++
+  [resourceDependenciesTest]
+
 -- this is a dummy tree we use for testing
 testTree :: DependencyType -> Bool -> TestTree
 testTree deptype succeed =
@@ -44,8 +50,9 @@ circDepTests = do
       Left DependencyLoop -> return ()
       _ -> assertFailure $ show r
 
-testDependencies :: TestTree
-testDependencies = testGroup "Dependencies" $ circDepTests ++ do
+-- | Check the semantics of dependencies
+generalDependencyTests :: [TestTree]
+generalDependencyTests = do
   succeed <- [True, False]
   deptype <- [AllSucceed, AllFinish]
   return $ testCase (printf "%-5s %s" (show succeed) (show deptype)) $ do
@@ -94,3 +101,45 @@ testDependencies = testGroup "Dependencies" $ circDepTests ++ do
           _ -> False
 
       return $ const $ return ()
+
+-- | A regression test for the bug uncovered by Martijn Bastiaan.
+resourceDependenciesTest :: TestTree
+resourceDependenciesTest = testCase "Resource+dependencies interaction" $ do
+  launchTestTree (singleOption $ NumThreads 2) resDepTree $ \smap -> do
+    let all_tests@[one, two] = IntMap.elems smap
+    -- at first, no tests have finished yet
+    threadDelay 2e5
+    forM_ all_tests $ \tv -> do
+      st <- atomically $ readTVar tv
+      assertBool (show st) $
+        case st of
+          Done {} -> False
+          _ -> True
+
+    -- after 1 second, only the first test should be finished even though
+    -- we're running in 2 threads, as the second should have waited for the
+    -- first one.
+    threadDelay 1e6
+    st <- atomically $ readTVar one
+    assertBool (show st) $
+      case st of
+        Done r -> resultSuccessful r == True
+        _ -> False
+    st <- atomically $ readTVar two
+    assertBool (show st) $
+      case st of
+        Done _ -> False
+        _ -> True
+
+    return $ const $ return ()
+
+-- An example with resources and dependencies, from
+-- https://github.com/feuerbach/tasty/issues/48#issuecomment-430541146
+resDepTree :: TestTree
+resDepTree = testGroup "L1"
+  [ withResource (return ()) (const $ return ()) $ const $ testGroup "L2"
+    [ testCase "L2A" (threadDelay 1000000)
+    , after AllFinish "($(NF-0) == \"L2A\") && ($(NF-1) == \"L2\") && ($(NF-2) == \"L1\")" $
+        testCase "L2B" (threadDelay 1000000)
+    ]
+  ]
