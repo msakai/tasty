@@ -738,7 +738,19 @@ Here are some caveats to keep in mind regarding dependencies in Tasty:
 1. Dependencies shouldn't form a cycle, otherwise Tasty with fail with the
    message "Test dependencies form a loop." A common cause of this is a test
    matching its own dependency pattern.
-1. TODO: Performance
+1. Using dependencies may introduce quadratic complexity. Specifically,
+   resolving dependencies is *O(number_of_tests × number_of_dependencies)*,
+   since each pattern has to be matched against each test name. As a guideline,
+   if you have up to 1000 tests, the overhead will be negligible, but if you
+   have thousands of tests or more, then you probably shouldn't have more than a
+   few dependencies.
+
+   Additionally, it is recommended that the dependencies follow the
+   natural order of tests, i.e. that the later tests in the test tree depend on
+   the earlier ones and not vice versa. If the execution order mandated by the
+   dependencies is sufficiently different from the natural order of tests in the
+   test tree, searching for the next test to execute may also have an
+   overhead quadratic in the number of tests.
 
 
 ## FAQ
