@@ -145,9 +145,9 @@ script:
   - ${CABAL} v2-test $WITHCOMPILER ${TEST} ${BENCH} all
 
   # CUSTOM TEST COMMANDS
-  - (cd ${PKGDIR_core_tests} && ${CABAL} v2-exec tasty-core-tests -- +RTS -N2)
-  - ${CABAL} v2-exec ${PKGDIR_core_tests}/exit-status-tests.sh
-  - ${CABAL} v2-exec ${PKGDIR_core_tests}/resource-release-test.sh
+  - (cd ${PKGDIR_core_tests} && ${CABAL} ${WITHCOMPILER} v2-exec tasty-core-tests -- +RTS -N2)
+  - ${CABAL} ${WITHCOMPILER} v2-exec ${PKGDIR_core_tests}/exit-status-tests.sh
+  - ${CABAL} ${WITHCOMPILER} v2-exec ${PKGDIR_core_tests}/resource-release-test.sh
   # END CUSTOM TEST COMMANDS
 
   # haddock...
