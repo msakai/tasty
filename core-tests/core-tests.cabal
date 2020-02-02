@@ -12,7 +12,12 @@ maintainer:          roma@ro-che.info
 -- copyright:           
 category:            Testing
 build-type:          Simple
--- extra-source-files:  
+extra-source-files:
+  awk/*.golden.ast
+  awk/*.golden.value
+  awk/*.awk
+  exit-status-tests.sh
+  resource-release-test.sh
 cabal-version:       >=1.10
 Tested-With:
   GHC ==8.0.2 ||
