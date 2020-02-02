@@ -145,6 +145,13 @@ script:
   - ${CABAL} v2-build $WITHCOMPILER ${TEST} ${BENCH} all
   # Testing...
   - ${CABAL} v2-test $WITHCOMPILER ${TEST} ${BENCH} all
+
+  # CUSTOM TEST COMMANDS
+  - (cd core-tests && cabal v2-exec tasty-core-tests -- +RTS -N2)
+  - cabal v2-exec core-tests/exit-status-tests.sh
+  - cabal v2-exec core-tests/resource-release-test.sh
+  # END CUSTOM TEST COMMANDS
+
   # cabal check...
   - (cd ${PKGDIR_tasty} && ${CABAL} -vnormal check)
   - (cd ${PKGDIR_core_tests} && ${CABAL} -vnormal check)
