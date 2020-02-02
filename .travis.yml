@@ -146,6 +146,8 @@ script:
 
   # CUSTOM TEST COMMANDS
   - set -x
+  - pwd
+  - find .
   - (cd ${PKGDIR_core_tests} && ${CABAL} v2-exec ${WITHCOMPILER} tasty-core-tests -- +RTS -N2)
   - ${CABAL} v2-exec ${WITHCOMPILER} ${PKGDIR_core_tests}/exit-status-tests.sh
   - ${CABAL} v2-exec ${WITHCOMPILER} ${PKGDIR_core_tests}/resource-release-test.sh
