@@ -150,12 +150,6 @@ script:
   - cabal v2-exec core-tests/resource-release-test.sh
   # END CUSTOM TEST COMMANDS
 
-  # cabal check...
-  - (cd ${PKGDIR_tasty} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_core_tests} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_tasty_hunit} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_tasty_quickcheck} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_tasty_smallcheck} && ${CABAL} -vnormal check)
   # haddock...
   - ${CABAL} v2-haddock $WITHCOMPILER --with-haddock $HADDOCK ${TEST} ${BENCH} all
   # Building without installed constraints for packages in global-db...
