@@ -13,7 +13,9 @@ maintainer:          roma@ro-che.info
 category:            Testing
 build-type:          Simple
 extra-source-files:
-  awk/*
+  awk/*.golden.ast
+  awk/*.golden.value
+  awk/*.awk
   exit-status-tests.sh
   resource-release-test.sh
 cabal-version:       >=1.10
