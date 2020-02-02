@@ -108,8 +108,6 @@ install:
   - ${CABAL} v2-freeze $WITHCOMPILER ${TEST} ${BENCH}
   - "cat cabal.project.freeze | sed -E 's/^(constraints: *| *)//' | sed 's/any.//'"
   - rm  cabal.project.freeze
-  - ${CABAL} v2-build $WITHCOMPILER ${TEST} ${BENCH} --dep -j2 all
-  - ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks --dep -j2 all
 script:
   - DISTDIR=$(mktemp -d /tmp/dist-test.XXXX)
   # Packaging...
@@ -145,12 +143,13 @@ script:
   - ${CABAL} v2-build $WITHCOMPILER ${TEST} ${BENCH} all
   # Testing...
   - ${CABAL} v2-test $WITHCOMPILER ${TEST} ${BENCH} all
-  # cabal check...
-  - (cd ${PKGDIR_tasty} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_core_tests} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_tasty_hunit} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_tasty_quickcheck} && ${CABAL} -vnormal check)
-  - (cd ${PKGDIR_tasty_smallcheck} && ${CABAL} -vnormal check)
+
+  # CUSTOM TEST COMMANDS
+  - (cd ${PKGDIR_core_tests} && ${CABAL} v2-exec ${WITHCOMPILER} tasty-core-tests -- +RTS -N2)
+  - ${CABAL} v2-exec ${WITHCOMPILER} ${PKGDIR_core_tests}/exit-status-tests.sh
+  - ${CABAL} v2-exec ${WITHCOMPILER} ${PKGDIR_core_tests}/resource-release-test.sh
+  # END CUSTOM TEST COMMANDS
+
   # haddock...
   - ${CABAL} v2-haddock $WITHCOMPILER --with-haddock $HADDOCK ${TEST} ${BENCH} all
   # Building without installed constraints for packages in global-db...
