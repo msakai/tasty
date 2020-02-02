@@ -145,9 +145,9 @@ script:
   - ${CABAL} v2-test $WITHCOMPILER ${TEST} ${BENCH} all
 
   # CUSTOM TEST COMMANDS
-  - (cd core-tests && cabal v2-exec tasty-core-tests -- +RTS -N2)
-  - cabal v2-exec core-tests/exit-status-tests.sh
-  - cabal v2-exec core-tests/resource-release-test.sh
+  - (cd core-tests && ${CABAL} v2-exec tasty-core-tests -- +RTS -N2)
+  - ${CABAL} v2-exec core-tests/exit-status-tests.sh
+  - ${CABAL} v2-exec core-tests/resource-release-test.sh
   # END CUSTOM TEST COMMANDS
 
   # haddock...
