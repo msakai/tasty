@@ -135,7 +135,7 @@ script:
         # compatible with older versions of ghc
         if [ "$dir" != core-tests ]; then
           cd $dir
-          cabal sdist
+          cabal v1-sdist
           PKGVER=$(cabal info . | awk '{print $2;exit}')
           SRC_TGZ=$PKGVER.tar.gz
           cd dist
@@ -143,11 +143,11 @@ script:
           cd "$PKGVER"
           if [ "$GHCVER" = 7.8.4 ] # protects about pcre-light breakage
           then
-            cabal configure
+            cabal v1-configure
           else
-            cabal configure --enable-tests
+            cabal v1-configure --enable-tests
           fi
-          cabal build
+          cabal v1-build
           cd $ORIGDIR
         fi
       done
