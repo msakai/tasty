@@ -55,7 +55,7 @@ matrix:
     compiler: ": #GHC 8.10.2"
     addons: {apt: {packages: [cabal-install-2.4,ghc-8.10.2], sources: [hvr-ghc]}}
 
-  - env: BUILD=stack ARGS="--resolver nightly-2020-10-24" WARNINGS=true
+  - env: BUILD=stack ARGS="--resolver nightly-2020-10-23" WARNINGS=true
     compiler: ": #stack 8.10.2"
     addons: {apt: {packages: [libgmp-dev]}}
 
