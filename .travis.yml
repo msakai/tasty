@@ -33,31 +33,35 @@ cache:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
-  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=2.4
-    compiler: ": #GHC 7.10.3"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-7.10.3], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=2.4
-    compiler: ": #GHC 8.0.2"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.0.2], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.4
-    compiler: ": #GHC 8.2.2"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.2.2], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.4.2 CABALVER=2.4
-    compiler: ": #GHC 8.4.2"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.4.2], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.6.1 CABALVER=2.4
-    compiler: ": #GHC 8.6.1"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.6.1], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.8.1 CABALVER=2.4
-    compiler: ": #GHC 8.8.1"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.8.1], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.10.2 CABALVER=2.4
-    compiler: ": #GHC 8.10.2"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.10.2], sources: [hvr-ghc]}}
-
-  - env: BUILD=stack ARGS="--resolver nightly-2020-10-23" WARNINGS=true
+#  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=2.4
+#    compiler: ": #GHC 7.10.3"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-7.10.3], sources: [hvr-ghc]}}
+#  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=2.4
+#    compiler: ": #GHC 8.0.2"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-8.0.2], sources: [hvr-ghc]}}
+#  - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.4
+#    compiler: ": #GHC 8.2.2"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-8.2.2], sources: [hvr-ghc]}}
+#  - env: BUILD=cabal GHCVER=8.4.2 CABALVER=2.4
+#    compiler: ": #GHC 8.4.2"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-8.4.2], sources: [hvr-ghc]}}
+#  - env: BUILD=cabal GHCVER=8.6.1 CABALVER=2.4
+#    compiler: ": #GHC 8.6.1"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-8.6.1], sources: [hvr-ghc]}}
+#  - env: BUILD=cabal GHCVER=8.8.1 CABALVER=2.4
+#    compiler: ": #GHC 8.8.1"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-8.8.1], sources: [hvr-ghc]}}
+#  - env: BUILD=cabal GHCVER=8.10.2 CABALVER=2.4
+#    compiler: ": #GHC 8.10.2"
+#    addons: {apt: {packages: [cabal-install-2.4,ghc-8.10.2], sources: [hvr-ghc]}}
+#
+#  - env: BUILD=stack ARGS="--resolver nightly-2020-10-23" WARNINGS=true
+#    compiler: ": #stack 8.10.2"
+#    addons: {apt: {packages: [libgmp-dev]}}
+  - os: osx
+    osx_image: xcode12.2
+    env: BUILD=stack ARGS="--resolver nightly-2020-10-23" WARNINGS=true
     compiler: ": #stack 8.10.2"
-    addons: {apt: {packages: [libgmp-dev]}}
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
